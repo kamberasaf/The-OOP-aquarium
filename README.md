@@ -1,2 +1,2 @@
 # UNI-HW2
-hw2
+Run main.py
