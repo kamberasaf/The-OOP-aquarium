@@ -1,4 +1,4 @@
-from Animal import Animal
+from animal import Animal
 
 MAX_FISH_HEIGHT = 5
 MAX_FISH_WIDTH = 8
