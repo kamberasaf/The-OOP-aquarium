@@ -310,4 +310,4 @@ class Aqua:
             valid_input = True
 
         for i in range(num_of_steps):
-            self.next_turn(
+            self.next_turn()
