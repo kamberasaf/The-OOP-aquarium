@@ -1,26 +1,87 @@
 import time
+from typing import Optional
+
 import Aqua
 
 
-def valid_num_check(word: str, num=0) -> float or bool:
-    # This is checking for a valid number.
+def parse_positive_int(value: str, min_value: int = 1, max_value: Optional[int] = None) -> Optional[int]:
+    """
+    Parse string input to a positive integer between min_value and max_value.
+    Return None if invalid.
+    """
     try:
-        if '.' in word:
-            for s in set(*word.split('.')[1:]):
-                if s != '0':
-                    print('\nPlease enter a valid number.\n')
-                    return False
-        word = float(word)
-        word = int(word)
-        if word < num or word <= 0:
-            raise ValueError
-    except (ValueError, TypeError):
-        print('\nPlease enter a valid number.\n')
-        return False
-    return word
+        num = float(value)
+        if not num.is_integer():
+            return None
+        num = int(num)
+        if num < min_value:
+            return None
+        if max_value is not None and num > max_value:
+            return None
+        return num
+    except ValueError:
+        return None
 
 
-def demo(myaqua):
+def input_choice(prompt: str, valid_choices: list[int]) -> int:
+    """Prompt user to input one of valid_choices, repeat until valid."""
+    while True:
+        choice = input(prompt)
+        parsed = parse_positive_int(choice)
+        if parsed in valid_choices:
+            return parsed
+        print(f"Please enter a valid number: {valid_choices}")
+
+
+def input_direction(prompt: str) -> int:
+    """Prompt user for direction input (0 or 1)."""
+    while True:
+        val = input(prompt)
+        parsed = parse_positive_int(val, 0, 1)
+        if parsed in [0, 1]:
+            return parsed
+        print("Please enter 0 or 1.")
+
+
+def input_name(prompt: str) -> str:
+    """Prompt user for a valid name with only alphanumeric characters or spaces."""
+    while True:
+        name = input(prompt).strip()
+        if name and all(c.isalnum() or c == ' ' for c in name):
+            return name
+        print("Please enter a valid name (letters, numbers, and spaces only).")
+
+
+def input_animal_position(prompt_x: str, prompt_y: str, aqua: Aqua.Aqua, fish_type: int) -> tuple[int, int]:
+    """
+    Prompt for animal position.
+    X must be between 1 and aqua_width-1.
+    Y depends on animal type; fish (1,2) in waterline to height-1, others Y=0.
+    """
+    max_x = aqua.aqua_width - 1
+    while True:
+        x = parse_positive_int(input(prompt_x), 1, max_x)
+        if x is None:
+            print(f"Please enter an integer between 1 and {max_x}.")
+            continue
+        break
+
+    y = 0
+    if fish_type in [1, 2]:  # fish need Y input
+        min_y = Aqua.WATERLINE
+        max_y = aqua.aqua_height - 1
+        while True:
+            y_val = parse_positive_int(input(prompt_y), min_y, max_y)
+            if y_val is None:
+                print(f"Please enter an integer between {min_y} and {max_y}.")
+                continue
+            y = y_val
+            break
+    return x, y
+
+
+def demo(myaqua: Aqua.Aqua, sleep_time: float = 0.5) -> None:
+    """Run a demo with preset animals and aquarium simulation."""
     myaqua.add_animal("scalarfish1", 4, 10, 10, 1, 0, 'sc')
     myaqua.add_animal("molyfish2", 12, 35, 15, 0, 1, 'mo')
     myaqua.add_animal("shrimpcrab1", 3, 20, myaqua.aqua_height, 1, 0, 'sh')
@@ -31,165 +92,67 @@ def demo(myaqua):
         if i % 50 == 0:
             myaqua.feed_all()
         myaqua.next_turn()
-        if i != 119:  # we want to print the final run once.
+        if i != 119:
             myaqua.print_board()
             print('\n')
-        time.sleep(0.5)
+        time.sleep(sleep_time)
 
 
-def add_animal(myaqua):
-    valid_int = False
-    while not valid_int:
-        print("\nPlease select:")
-        print("1. Scalar")
-        print("2. Moly")
-        print("3. Ocypode")
-        print("4. Shrimp")
-        fish_type = input("What animal do you want to put in the aquarium?")
-        fish_type = valid_num_check(fish_type)
-        if fish_type not in [1, 2, 3, 4]:
-            if fish_type:
-                print('\nPlease enter a valid number.\n')
-                continue
-            continue
-        valid_int = True
-    valid_name = False
-    while not valid_name:
-        name = input("Please enter a name:")
-        try:
-            for i in name.replace(" ", ""):
-                if not i.isalnum():
-                    raise ValueError
-            if len(name.replace(" ", "")) == 0:
-                raise ValueError
-        except (ValueError, TypeError):
-            print('\nPlease enter a valid name.')
-            continue
-        valid_name = True
+def add_animal(myaqua: Aqua.Aqua) -> None:
+    """Interactively add an animal to the aquarium."""
+    print("\nPlease select an animal type:")
+    print("1. Scalar")
+    print("2. Moly")
+    print("3. Ocypode")
+    print("4. Shrimp")
 
-    valid_age = False
-    while not valid_age:
-        age = input("Please enter age:")
-        age = valid_num_check(age)
-        if age not in [i for i in range(1, 101)]:
-            if age:
-                print('\nPlease enter a valid number.\n')
-                continue
-            continue
-        valid_age = True
+    fish_type = input_choice("What animal do you want to put in the aquarium? ", [1, 2, 3, 4])
+    name = input_name("Please enter a name: ")
+    age = input_choice("Please enter age (1-100): ", list(range(1, 101)))
 
-    success = False
-    while not success:
-        x, y = 0, 0
-        valid_x_int = False
-        while not valid_x_int:
-            x = input("Please enter an X axis location (1 - %d):" % (myaqua.aqua_width - 1))
-            x = valid_num_check(x)
-            if not (1 <= x <= (myaqua.aqua_width - 1)):
-                if x:
-                    print('Please enter a valid number.\n')
-                    continue
-                continue
-            valid_x_int = True
+    x, y = input_animal_position(
+        f"Please enter an X axis location (1 - {myaqua.aqua_width - 1}): ",
+        f"Please enter a Y axis location ({Aqua.WATERLINE} - {myaqua.aqua_height - 1}): ",
+        myaqua,
+        fish_type,
+    )
 
-        if fish_type in [1, 2]:  # if a fish was selected
-            valid_y_int = False
-            while not valid_y_int:
-                y = input("Please enter an Y axis location (%d - %d):" % (Aqua.WATERLINE, myaqua.aqua_height - 1))
-                y = valid_num_check(y)
-                if not (Aqua.WATERLINE <= y <= (myaqua.aqua_height - 1)):
-                    if y:
-                        print('Please enter a valid number.\n')
-                        continue
-                    continue
-                valid_y_int = True
+    directionH = input_direction("Please enter horizontal direction (0 for Left, 1 for Right): ")
 
-        directionH, directionV = -1, -1
-        while not (directionH == 0 or directionH == 1):
-            directionH = input("Please enter horizontal direction (0 for Left, 1 for Right):")
-            try:
-                if '.' in directionH:
-                    for s in set(*directionH.split('.')[1:]):
-                        if s != '0':
-                            print('\nPlease enter a valid number.\n')
-                            return False
-                directionH = float(directionH)
-                directionH = int(directionH)
-            except (ValueError, TypeError):
-                print('Please enter a valid number.\n')
-                continue
-        if fish_type in [1, 2]:  # a fish
-            while not (directionV == 0 or directionV == 1):
-                directionV = input("Please enter vertical direction  (0 for Down, 1 for Up):")
-                try:
-                    if '.' in directionV:
-                        for s in set(*directionV.split('.')[1:]):
-                            if s != '0':
-                                print('\nPlease enter a valid number.\n')
-                                return False
-                    directionV = float(directionV)
-                    directionV = int(directionV)
-                except (ValueError, TypeError):
-                    print('Please enter a valid number.\n')
-                    continue
+    # Vertical direction only for fish (1 and 2)
+    directionV = 0
+    if fish_type in [1, 2]:
+        directionV = input_direction("Please enter vertical direction (0 for Down, 1 for Up): ")
 
-        if fish_type == 1:
-            success = myaqua.add_animal(name, age, x, y, directionH, directionV, 'sc')
-        elif fish_type == 2:
-            success = myaqua.add_animal(name, age, x, y, directionH, directionV, 'mo')
-        elif fish_type == 3:
-            success = myaqua.add_animal(name, age, x, y, directionH, 0, 'oc')
-        else:
-            success = myaqua.add_animal(name, age, x, y, directionH, 0, 'sh')
+    type_map = {1: 'sc', 2: 'mo', 3: 'oc', 4: 'sh'}
+    success = myaqua.add_animal(name, age, x, y, directionH, directionV, type_map[fish_type])
 
-    return None
+    if not success:
+        print("Failed to add animal. Please try different parameters.")
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    width = 0
-    height = 0
+def print_main_menu() -> None:
+    print("\nMain menu\n" + "-" * 30)
+    print("1. Add an animal")
+    print("2. Drop food into the aquarium")
+    print("3. Take a step forward")
+    print("4. Take several steps")
+    print("5. Demo")
+    print("6. Print all")
+    print("7. Exit")
 
+
+def main() -> None:
     print('\nWelcome to "The OOP Aquarium"')
-    valid_input = False
-    while not valid_input:
-        width = input("The width of the aquarium (Minimum 40): ")
-        width = valid_num_check(width, 40)
-        if not width:
-            continue
-        valid_height = False
-        while not valid_height:
-            height = input("The height of the aquarium (Minimum 25): ")
-            height = valid_num_check(height, 25)
-            if not height:
-                continue
-            valid_height = True
 
-        valid_input = True
+    width = input_choice("The width of the aquarium (Minimum 40): ", list(range(40, 10000)))
+    height = input_choice("The height of the aquarium (Minimum 25): ", list(range(25, 10000)))
 
     myaqua = Aqua.Aqua(width, height)
 
     while True:
-        valid_input = False
-        while not valid_input:
-            print("\nMain menu")
-            print("-" * 30)
-            print("1. Add an animal")
-            print("2. Drop food into the aquarium")
-            print("3. Take a step forward")
-            print("4. Take several steps")
-            print("5. Demo")
-            print("6. Print all")
-            print("7. Exit")
-
-            choice = input("\nWhat do you want to do?")
-            choice = valid_num_check(choice)
-            if choice not in [1, 2, 3, 4, 5, 6, 7]:
-                if choice:
-                    print('\nPlease enter a valid number.\n')
-                    continue
-                continue
-            valid_input = True
+        print_main_menu()
+        choice = input_choice("What do you want to do? ", list(range(1, 8)))
 
         if choice == 1:
             add_animal(myaqua)
@@ -203,9 +166,13 @@ if __name__ == '__main__':
             demo(myaqua)
         elif choice == 6:
             myaqua.print_all()
-        else:
+        else:  # Exit
             print("Bye bye")
-            exit()
+            break
 
         myaqua.print_board()
         print('\n')
+
+
+if __name__ == "__main__":
+    main()
