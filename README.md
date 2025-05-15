@@ -2,6 +2,7 @@
 
 An object-oriented Python aquarium simulation featuring four types of animals: two fish types (Scalar and Moly) and two crab types (Ocypode and Shrimp).
 
+
 ## Features
 
 - Add animals with customizable attributes (name, age, location, direction)
@@ -11,11 +12,13 @@ An object-oriented Python aquarium simulation featuring four types of animals: t
 - Print a live board display of the aquarium state
 - Demo mode showcasing the functionality with predefined animals
 
+
 ## Getting Started
 
 ### Prerequisites
 
 - Python 3.x installed on your system
+
 
 ### Running the Project
 
@@ -32,6 +35,7 @@ python main.py
 - When prompted, enter the aquarium dimensions (width >= 40, height >= 25)
 - Use the main menu to add animals, feed them, advance simulation steps, or run the demo
 - Follow input instructions carefully for adding animals (name, age, position, direction)
+
 
 
 ### Example
@@ -54,3 +58,20 @@ What do you want to do? 5
 ```
 
 ![Aquarium Demo](assets/aquarium_demo.gif)
+
+
+
+## Examples
+To see how animals can be added programmatically:
+```bash
+python examples/add_animals_example.py
+```
+
+
+## Running Tests
+Tests are located in the tests/ directory and use pytest.
+To run the tests:
+```bash
+pip install pytest
+pytest tests/
+```
