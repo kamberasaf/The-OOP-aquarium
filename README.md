@@ -25,7 +25,7 @@ An object-oriented Python aquarium simulation featuring four types of animals: t
 Clone the repository and run the main program:
 
 ```bash
-git clone https://github.com/<your-username>/The-OOP-aquarium.git
+git clone https://github.com/kamberasaf/The-OOP-aquarium.git
 cd The-OOP-aquarium
 python main.py
 ```
