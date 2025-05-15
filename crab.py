@@ -1,4 +1,4 @@
-from Animal import Animal
+from animal import Animal
 
 MAX_CRAB_HEIGHT = 4
 MAX_CRAB_WIDTH = 7
