@@ -1,336 +1,243 @@
-import Animal
-import Crab
-import Fish
-import Moly
-import Ocypode
-import Scalar
-import Shrimp
-import main
+from typing import List, Optional, Union
 
-MAX_ANIMAL_HEIGHT = 8
-MAX_ANIMAL_WIDTH = 8
-MAX_CRAB_HEIGHT = 4
-MAX_CRAB_WIDTH = 7
-MAX_FISH_HEIGHT = 5
-MAX_FISH_WIDTH = 8
-WATERLINE = 3
-FEED_AMOUNT = 10
-MAX_AGE = 120
+from Crab import Crab
+from Fish import Fish
+from Moly import Moly
+from Ocypode import Ocypode
+from Scalar import Scalar
+from Shrimp import Shrimp
 
+class AquaConstants:
+    MAX_ANIMAL_HEIGHT = 8
+    MAX_ANIMAL_WIDTH = 8
+    MAX_CRAB_HEIGHT = 4
+    MAX_CRAB_WIDTH = 7
+    MAX_FISH_HEIGHT = 5
+    MAX_FISH_WIDTH = 8
+    WATERLINE = 3
+    FEED_AMOUNT = 10
+    MAX_AGE = 120
 
 class Aqua:
-    def __init__(self, aqua_width, aqua_height):
-        self.turn = 0
-        self.aqua_height = aqua_height
-        self.aqua_width = aqua_width
-        self.board = [' '] * self.aqua_height
-        self.build_tank()
-        self.anim = []
+    def __init__(self) -> None:
+        self.animals: List[Union[Fish, Crab]] = []
+        self.board: List[List[str]] = [
+            [' '] * 30 for _ in range(12)
+        ]
+        self.print_board()
 
-    def build_tank(self):
-        col, row = self.aqua_width, len(self.board)
-        tank = [[' '] * col for _ in range(row)]
-        tank[2][1:-1] = '~' * (col - 2)
-        tank[-1] = ('_' * (col - 2)).join(['\\', '/'])
-        for row in tank[:-1]:
-            row[0], row[-1] = '|', '|'
-        self.board = tank
-
-    def print_board(self):
+    def print_board(self) -> None:
         """
-        prints the updated board on screen
+        Prints the aquarium board state.
         """
-        for row in self.get_board():
-            print(' '.join(item for item in row))
+        for row in self.board:
+            # Joining without spaces to avoid stretched visuals
+            print(''.join(row))
+        print("\n")
 
-    def get_board(self):
-        return self.board
-
-    def get_all_animal(self):
+    def clear_board(self) -> None:
         """
-        Returns the array that contains all the animals
+        Clears the board for the next update.
         """
-        return self.anim
+        self.board = [[' '] * 30 for _ in range(12)]
 
-    def is_collision(self, animal: Animal) -> bool:
+    def update_board(self) -> None:
         """
-        Returns True if the next step of the crab is a collision
+        Places all animals on the board according to their positions.
         """
-        x, y = animal.get_position()
-        a_dir = animal.get_directionH()
-        aq_height = self.aqua_height
-        board = self.get_board()
-        crabs = [crab for crab in self.get_all_animal() if isinstance(crab, Crab.Crab) is True]
-        for crab_2 in crabs:  # we want to look only at crabs.
-            if (a_dir == 1 and crab_2.x == x + 7) or \
-                    (a_dir == 0 and crab_2.x + 7 == x):  # we got a collision.
-                self.delete_animal_from_board(crab_2)
-                crab_2.set_directionH(1) if crab_2.get_directionH() == 0 else \
-                    crab_2.set_directionH(0) if crab_2.get_directionH() == 1 else None
-                self.print_animal_on_board(crab_2)
+        self.clear_board()
+        for animal in self.animals:
+            x, y = animal.position
+            image = animal.get_image()
+            height = len(image)
+            width = len(image[0])
+            for row in range(height):
+                for col in range(width):
+                    board_x = x + col
+                    board_y = y + row
+                    if 0 <= board_x < 30 and 0 <= board_y < 12:
+                        pixel = image[row][col]
+                        if pixel != ' ':
+                            self.board[board_y][board_x] = pixel
 
-                self.delete_animal_from_board(animal)  # we need to check if our next spot is empty.
-                try:
-                    if (board[aq_height - 3][x - 1] not in ['|', '*'] and
-                            board[aq_height - 4][x - 1] not in ['|', '*']):
-                        animal.set_x(x - 1)
-                    elif (board[aq_height - 3][x + 8] not in ['|', '*'] and
-                          board[aq_height - 4][x + 8] not in ['|', '*']):
-                        animal.set_x(x + 1)
-                except IndexError:
-                    pass
-                animal.set_directionH(0) if a_dir == 1 else \
-                    animal.set_directionH(1) if a_dir == 0 else None
-                self.print_animal_on_board(animal)
-                return True
+    def check_if_free(self, x: int, y: int, height: int, width: int) -> bool:
+        """
+        Checks if a rectangular area is free of other animals on the board.
+        """
+        # Bounds check
+        if x < 0 or y < 0 or x + width > 30 or y + height > 12:
+            return False
 
+        # Check for overlap with existing animals
+        for animal in self.animals:
+            ax, ay = animal.position
+            a_height = animal.get_height()
+            a_width = animal.get_width()
+
+            if (x < ax + a_width and x + width > ax and
+                y < ay + a_height and y + height > ay):
+                # Overlapping rectangles -> space not free
+                return False
+        return True
+
+    def add_fish(self, name: str, age: int, x: int, y: int, directionH: int,
+                 directionV: int, fish_type: str) -> bool:
+        """
+        Adds a fish to the aquarium if space is free.
+        """
+        fish_class_map = {
+            'sc': Scalar,
+            'mo': Moly
+        }
+        fish_cls = fish_class_map.get(fish_type.lower())
+        if not fish_cls:
+            print(f"Unknown fish type: {fish_type}")
+            return False
+
+        fish = fish_cls(name, age, x, y, directionH, directionV)
+        if not self.check_if_free(x, y, fish.get_height(), fish.get_width()):
+            print(f"Position {x},{y} not free for fish {name}")
+            return False
+
+        self.animals.append(fish)
+        return True
+
+    def add_crab(self, name: str, age: int, x: int, y: int, directionH: int,
+                 directionV: int, crab_type: str) -> bool:
+        """
+        Adds a crab to the aquarium if space is free.
+        """
+        crab_class_map = {
+            'oc': Ocypode,
+            'sh': Shrimp
+        }
+        crab_cls = crab_class_map.get(crab_type.lower())
+        if not crab_cls:
+            print(f"Unknown crab type: {crab_type}")
+            return False
+
+        crab = crab_cls(name, age, x, y, directionH, directionV)
+        if not self.check_if_free(x, y, crab.get_height(), crab.get_width()):
+            print(f"Position {x},{y} not free for crab {name}")
+            return False
+
+        self.animals.append(crab)
+        return True
+
+    def add_animal(self, name: str, age: int, x: int, y: int,
+                   directionH: int, directionV: int, animal_type: str) -> bool:
+        """
+        Adds an animal of given type (fish or crab).
+        """
+        animal_type = animal_type.lower()
+        add_methods = {
+            'sc': self.add_fish,
+            'mo': self.add_fish,
+            'oc': self.add_crab,
+            'sh': self.add_crab
+        }
+        method = add_methods.get(animal_type)
+        if not method:
+            print(f"Unknown animal type: {animal_type}")
+            return False
+        return method(name, age, x, y, directionH, directionV, animal_type)
+
+    def is_collision(self) -> None:
+        """
+        Checks and resolves crab collisions by repositioning them randomly.
+        """
+        crabs = [a for a in self.animals if isinstance(a, Crab)]
+        for i, crab1 in enumerate(crabs):
+            for crab2 in crabs[i+1:]:
+                if self._crabs_collide(crab1, crab2):
+                    print(f"Collision detected between {crab1.name} and {crab2.name}")
+                    self._resolve_crab_collision(crab1)
+                    self._resolve_crab_collision(crab2)
+
+    def _crabs_collide(self, crab1: Crab, crab2: Crab) -> bool:
+        """
+        Returns True if two crabs collide.
+        """
+        x1, y1 = crab1.position
+        x2, y2 = crab2.position
+        w1, h1 = crab1.get_width(), crab1.get_height()
+        w2, h2 = crab2.get_width(), crab2.get_height()
+
+        # Axis-Aligned Bounding Box collision detection
+        if (x1 < x2 + w2 and x1 + w1 > x2 and
+            y1 < y2 + h2 and y1 + h1 > y2):
+            return True
         return False
 
-    def print_animal_on_board(self, animal: Animal):
-        k = animal.get_animal()
-        x, y = animal.get_position()
-        an_height, an_width = animal.get_size()
-        aq_height, aq_width = self.aqua_height, self.aqua_width
-        board = self.get_board()
-        if isinstance(animal, Fish.Fish):
-            if (aq_width - x) < an_width + 1:  # checks if x is too close to right wall.
-                animal.set_x(aq_width - an_width - 1)
-            board[y][x:x + an_width] = k[0]
-            board[y + 1][x:x + an_width] = k[1]
-            board[y + 2][x:x + an_width] = k[2]
-
-            if isinstance(animal, Scalar.Scalar):
-                board[y + 3][x:x + an_width] = k[3]
-                board[y + 4][x:x + an_width] = k[4]
-
-        elif isinstance(animal, Crab.Crab):
-            if (aq_width - x) < an_width + 1:  # checks if x is too close to right wall.
-                animal.set_x(aq_width - an_width - 1)
-            board[aq_height - 4][x:x + an_width] = k[len(k) - 3]
-            board[aq_height - 3][x:x + an_width] = k[len(k) - 2]
-            board[aq_height - 2][x:x + an_width] = k[len(k) - 1]
-
-            if isinstance(animal, Ocypode.Ocypode):
-                board[aq_height - 5][x:x + an_width] = k[0]
-
-    def delete_animal_from_board(self, animal: Animal):
-        x, y = animal.get_position()
-        an_height, an_width = animal.get_size()
-        board = self.get_board()
-        aq_height = self.aqua_height
-        for h in range(an_height):
-            if isinstance(animal, Fish.Fish):
-                board[y + h][x:x + an_width] = ' ' * an_width
-            else:
-                board[aq_height - 2 - h][x:x + an_width] = ' ' * an_width
-
-    def add_animal(self, name, age, x, y, directionH, directionV, animaltype):
-        if animaltype == 'sc' or animaltype == 'mo':
-            return self.add_fish(name, age, x, y, directionH, directionV, animaltype)
-        elif animaltype == 'oc' or animaltype == 'sh':
-            return self.add_crab(name, age, x, y, directionH, animaltype)
-
-    def add_fish(self, name, age, x, y, directionH, directionV, fishtype):
+    def _resolve_crab_collision(self, crab: Crab) -> None:
         """
-        Adding fish to the aquarium
+        Repositions a crab randomly to resolve collision.
         """
-        aq_height, aq_width = self.aqua_height, self.aqua_width
-        if (aq_width - x) < MAX_FISH_WIDTH + 1:  # checks if x is too close to right wall.
-            x = aq_width - MAX_FISH_WIDTH - 1
+        import random
+        max_attempts = 10
+        for _ in range(max_attempts):
+            new_x = random.randint(0, 30 - crab.get_width())
+            new_y = random.randint(AquaConstants.WATERLINE + 1,
+                                   12 - crab.get_height())
+            if self.check_if_free(new_x, new_y, crab.get_height(), crab.get_width()):
+                crab.set_position(new_x, new_y)
+                print(f"Crab {crab.name} moved to ({new_x},{new_y}) to resolve collision")
+                return
+        print(f"Failed to reposition crab {crab.name} after collision")
 
-        if fishtype == 'sc':  # width - 8, height = 5
-            if (aq_height - MAX_ANIMAL_HEIGHT - 1) <= y:
-                y = aq_height - MAX_CRAB_HEIGHT - 6
-            new_fish = Scalar.Scalar(name, age, x, y, directionH, directionV)
-        elif fishtype == 'mo':  # width = 8, height = 3
-            if (aq_height - MAX_ANIMAL_HEIGHT) <= y:
-                y = aq_height - MAX_CRAB_HEIGHT - 4
-            new_fish = Moly.Moly(name, age, x, y, directionH, directionV)
-
-        if not self.check_if_free(x, y):  # check if we get an 8x8 cube of free space.
-            print("The place is not available! Please try again later. ")
-            return False
-
-        self.anim.append(new_fish)
-        self.print_animal_on_board(new_fish)
-        return True
-
-    def add_crab(self, name, age, x, y, directionH, crabtype):
+    # Movement methods for animals:
+    def left(self, animal: Union[Fish, Crab]) -> None:
         """
-        Adding crab to the aquarium
+        Moves the animal left if no collision or boundary.
         """
-        if (self.aqua_width - x) < MAX_CRAB_WIDTH + 1:  # checks if x is too close to right wall.
-            x = self.aqua_width - MAX_CRAB_WIDTH - 1
-        y = self.aqua_height - MAX_CRAB_HEIGHT
+        x, y = animal.position
+        if x <= 0:
+            return  # boundary reached
+        if self.check_if_free(x - 1, y, animal.get_height(), animal.get_width()):
+            animal.set_position(x - 1, y)
+            animal.set_direction_h(-1)
 
-        if not self.check_if_free(x, y):
-            print("The place is not available! Please try again later. ")
-            return False
-
-        if crabtype == 'sh':  # shrimp
-            new_crab = Shrimp.Shrimp(name, age, x, y, directionH)
-        elif crabtype == 'oc':  # ocypode
-            new_crab = Ocypode.Ocypode(name, age, x, y, directionH)
-        self.anim.append(new_crab)
-        self.print_animal_on_board(new_crab)
-        return True
-
-    def check_if_free(self, x: int, y: int) -> bool:
+    def right(self, animal: Union[Fish, Crab]) -> None:
         """
-        method for checking whether the position is empty before inserting a new animal
+        Moves the animal right if no collision or boundary.
         """
-        try:
-            for t in range(MAX_ANIMAL_HEIGHT):
-                for i in self.board[y + t][x:x + MAX_ANIMAL_WIDTH]:
-                    if i == '*':
-                        return False  # we have an animal there
-        except IndexError:  # happens every time for the crabs.
-            pass
-        return True
+        x, y = animal.position
+        max_width = AquaConstants.MAX_CRAB_WIDTH if isinstance(animal, Crab) else AquaConstants.MAX_FISH_WIDTH
+        if x + max_width >= 30:
+            return  # boundary reached
+        if self.check_if_free(x + 1, y, animal.get_height(), animal.get_width()):
+            animal.set_position(x + 1, y)
+            animal.set_direction_h(1)
 
-    def left(self, a: Animal):
-        animal = a
-        x, y = animal.get_position()
-        if self.board[y][x - 1] == '|':  # first we check if we hit a wall on the next move.
-            self.delete_animal_from_board(animal)
-            animal.set_directionH(1)
-            return self.print_animal_on_board(animal)
-
-        if isinstance(animal, Crab.Crab):
-            if self.is_collision(animal):  # this function will handle crabs collisions.
-                return None
-
-        self.delete_animal_from_board(animal)
-        animal.left()
-        self.print_animal_on_board(animal)
-
-    def right(self, a: Animal):
-        animal = a
-        x, y = animal.get_position()
-        if (isinstance(animal, Crab.Crab) and self.board[y][x + 7] == '|') or \
-                (isinstance(animal, Fish.Fish) and self.board[y][x + 8] == '|'):
-            self.delete_animal_from_board(animal)  # if it's a wall just turn around
-            animal.set_directionH(0)
-            return self.print_animal_on_board(animal)
-
-        if isinstance(animal, Crab.Crab):
-            if self.is_collision(animal):  # this will handle crabs collisions.
-                return None
-
-        self.delete_animal_from_board(animal)
-        animal.right()
-        self.print_animal_on_board(animal)
-
-    def up(self, a: Animal):
-        fish = a
-        x, y = fish.get_position()
-        if y == WATERLINE:
-            self.delete_animal_from_board(fish)
-            fish.set_directionV(0)
-            return self.print_animal_on_board(fish)
-
-        self.delete_animal_from_board(fish)
-        fish.up()
-        self.print_animal_on_board(fish)
-
-    def down(self, a: Animal):
-        fish = a
-        x, y = fish.get_position()
-        if self.aqua_height - y - fish.height - 1 == MAX_CRAB_HEIGHT:  # lower edge
-            fish.set_directionV(1)
-            self.delete_animal_from_board(fish)
-            self.print_animal_on_board(fish)
-            return None
-
-        self.delete_animal_from_board(fish)
-        fish.down()
-        self.print_animal_on_board(fish)
-
-    def next_turn(self):
+    def up(self, animal: Union[Fish, Crab]) -> None:
         """
-        Managing a single step
+        Moves the animal up if no collision or boundary.
         """
-        for animal in self.anim[:]:
-            if self.turn % 10 == 0:
-                animal.dec_food()
-                if self.turn % 100 == 0:
-                    animal.inc_age()
+        x, y = animal.position
+        if y <= AquaConstants.WATERLINE:
+            return  # water surface reached
+        if self.check_if_free(x, y - 1, animal.get_height(), animal.get_width()):
+            animal.set_position(x, y - 1)
+            animal.set_direction_v(-1)
 
-                if not animal.get_alive():  # check if the fish has died.
-                    self.delete_animal_from_board(animal)
-                    self.anim.remove(animal)
-                    continue
-
-            try:
-                if animal.get_directionV() == 0:
-                    self.down(animal)
-                else:
-                    self.up(animal)
-            except AttributeError:
-                pass
-
-            if animal.get_directionH() == 1:
-                self.right(animal)
-                if animal.get_directionH() == 0:  # skip if the animal has changed direction.
-                    continue
-            else:
-                self.left(animal)
-
-        for anim in self.anim:  # make sure the animals are not missing body parts.
-            self.delete_animal_from_board(anim)
-            self.print_animal_on_board(anim)
-
-        self.turn += 1
-
-    def print_all(self):
+    def down(self, animal: Union[Fish, Crab]) -> None:
         """
-        Prints all the animals in the aquarium
+        Moves the animal down if no collision or boundary.
         """
-        for animal in self.anim:
-            print(animal)
+        x, y = animal.position
+        max_height = AquaConstants.MAX_CRAB_HEIGHT if isinstance(animal, Crab) else AquaConstants.MAX_FISH_HEIGHT
+        if y + max_height >= 12:
+            return  # bottom reached
+        if self.check_if_free(x, y + 1, animal.get_height(), animal.get_width()):
+            animal.set_position(x, y + 1)
+            animal.set_direction_v(1)
 
-    def feed_all(self):
+    def feed(self) -> None:
         """
-        feed all the animals in the aquarium
+        Feeds all animals, increasing their age and possibly affecting behavior.
         """
-        for animal in self.get_all_animal():
-            animal.add_food(FEED_AMOUNT)
-
-    def several_steps(self):
-        """
-        Managing several steps
-        """
-        num_of_steps = 0
-        valid_input = False
-        while not valid_input:
-            num_of_steps = input('How many step do you want to take?')
-            num_of_steps = main.valid_num_check(num_of_steps)
-            if not num_of_steps:
-                continue
-            valid_input = True
-
-        for i in range(num_of_steps):
-            self.next_turn()
-
-
-if __name__ == '__main__':
-    a = Aqua(40, 25)
-    animal_3 = Moly.Moly('Asaf', 23, 1, 12, 1, 0)
-    animal_1 = Moly.Moly('Asaf', 23, 9, 12, 1, 0)
-    animal_2 = Ocypode.Ocypode('Asaf', 1, 1, 1, 1)
-    animal_4 = Ocypode.Ocypode('Asaf', 1, 8, 1, 1)
-    a.add_animal(animal_3.name, animal_3.age, animal_3.x, animal_3.y, animal_3.directionH, directionV=None,animaltype='mo')
-    a.add_animal(animal_2.name, animal_2.age, animal_2.x, animal_2.y, animal_2.directionH, directionV=None,
-                 animaltype='oc')
-    a.add_animal(animal_1.name, animal_1.age, animal_1.x, animal_1.y, animal_1.directionH, directionV=None,
-                 animaltype='mo')
-    a.add_animal(animal_4.name, animal_4.age, animal_4.x, animal_4.y, animal_4.directionH, directionV=None,animaltype='sh')
-    a.print_board()
-    a.next_turn()
-    # a.delete_animal_from_board(animal_3)
-    a.print_board()
-    # a.next_turn()
-    # a.add_animal(animal_2.name, animal_1.age, animal_1.x, animal_1.y, animal_1.directionH, animal_1.directionV, 'oc')
-    # a.delete_animal_from_board(animal_2)
-    # a.delete_animal_from_board(animal_1)
-    # a.print_board()
+        for animal in self.animals:
+            animal.increase_age(AquaConstants.FEED_AMOUNT)
+            if animal.get_age() > AquaConstants.MAX_AGE:
+                print(f"{animal.name} reached max age and is removed.")
+                self.animals.remove(animal)
