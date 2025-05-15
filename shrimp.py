@@ -1,4 +1,4 @@
-from Crab import Crab
+from crab import Crab
 
 
 class Shrimp(Crab):
