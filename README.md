@@ -54,3 +54,4 @@ What do you want to do? 5
 
 [Simulation runs demo with sample animals and prints board every step]
 ```
+![Aquarium Demo](assets/aquarium_demo.gif)
