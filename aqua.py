@@ -1,11 +1,11 @@
 from typing import List, Optional, Union
 
-from Crab import Crab
-from Fish import Fish
-from Moly import Moly
-from Ocypode import Ocypode
-from Scalar import Scalar
-from Shrimp import Shrimp
+from crab import Crab
+from fish import Fish
+from moly import Moly
+from ocypode import Ocypode
+from scalar import Scalar
+from shrimp import Shrimp
 
 class AquaConstants:
     MAX_ANIMAL_HEIGHT = 8
